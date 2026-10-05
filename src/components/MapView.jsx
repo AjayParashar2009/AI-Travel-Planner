@@ -1,247 +1,395 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix Leaflet marker icons when using Vite/React
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
+const PERIODS = ["morning", "afternoon", "evening"];
 
-delete L.Icon.Default.prototype._getIconUrl;
+const PERIOD_STYLE = {
+  morning: { color: "#f59e0b", label: "Morning" },
+  afternoon: { color: "#3b82f6", label: "Afternoon" },
+  evening: { color: "#8b5cf6", label: "Evening" },
+};
 
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
+const DEFAULT_CENTER = [20.5937, 78.9629];
+const CACHE_KEY = "yatra_geocode_cache_v1";
+
+const memoryCache = new Map();
+
+try {
+  const stored = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
+  Object.entries(stored).forEach(([k, v]) => memoryCache.set(k, v));
+} catch {
+  // Ignore corrupt or unavailable storage
+}
+
+function persistCache() {
+  try {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify(Object.fromEntries(memoryCache)),
+    );
+  } catch {
+    // Storage full or blocked
+  }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Returns { coords, fromNetwork }. coords is [lat, lng] or null.
+async function geocode(query, signal) {
+  const key = query.toLowerCase().trim();
+  if (memoryCache.has(key)) {
+    return { coords: memoryCache.get(key), fromNetwork: false };
+  }
+
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
+    { headers: { "Accept-Language": "en" }, signal },
+  );
+  if (!res.ok) throw new Error(`Nominatim ${res.status}`);
+
+  const data = await res.json();
+  const coords = data?.[0]
+    ? [parseFloat(data[0].lat), parseFloat(data[0].lon)]
+    : null;
+
+  // Only cache successful lookups so a temporary failure can be retried
+  if (
+    Array.isArray(coords) &&
+    coords.length === 2 &&
+    coords.every(Number.isFinite)
+  ) {
+    memoryCache.set(key, coords);
+    persistCache();
+  }
+  return { coords, fromNetwork: true };
+}
+
+function numberedIcon(number, color, active) {
+  const size = active ? 40 : 32;
+  return L.divIcon({
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+    html: `<div style="
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:${color};color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font:700 ${active ? 16 : 14}px/1 system-ui,sans-serif;
+      border:3px solid #fff;
+      box-shadow:0 2px 8px rgba(0,0,0,.45);
+      transition:all .2s;">${number}</div>`,
+  });
+}
+
+const destinationIcon = L.divIcon({
+  className: "",
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  html: `<div style="
+    width:18px;height:18px;border-radius:50%;
+    background:#fff;border:4px solid #111;
+    box-shadow:0 0 0 3px rgba(255,255,255,.35);"></div>`,
 });
 
-// ----------------------------------------------------
-// Map controller - SAFETY CHECKS ADDED
-// ----------------------------------------------------
-function MapController({ center, focusLocation }) {
+function CameraController({ center, points, focusPoint, activeDay }) {
   const map = useMap();
 
+  // Leaflet shows grey tiles when its container resizes after mount
   useEffect(() => {
-    const target = focusLocation || center;
+    const t = setTimeout(() => map.invalidateSize(), 250);
+    const onResize = () => map.invalidateSize();
+    window.addEventListener("resize", onResize);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [map]);
 
-    // 🛑 CRITICAL FIX: Prevent Leaflet crash on null/undefined/NaN coordinates
-    if (
-      !target ||
-      !Array.isArray(target) ||
-      target.length !== 2 ||
-      typeof target[0] !== "number" ||
-      typeof target[1] !== "number" ||
-      isNaN(target[0]) ||
-      isNaN(target[1])
-    ) {
-      return;
+  // Frame the whole day whenever the day or its resolved points change
+  useEffect(() => {
+    if (points.length > 1) {
+      map.flyToBounds(L.latLngBounds(points), {
+        padding: [70, 70],
+        maxZoom: 15,
+        duration: 1,
+      });
+    } else if (points.length === 1) {
+      map.flyTo(points[0], 14, { duration: 1 });
+    } else if (center) {
+      map.flyTo(center, 12, { duration: 1 });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, activeDay, points.length, center?.[0], center?.[1]]);
 
-    map.flyTo(target, 13, {
-      duration: 1.2,
-    });
-  }, [center, map, focusLocation]);
+  // Zoom in when a specific activity is selected
+  useEffect(() => {
+    if (focusPoint) map.flyTo(focusPoint, 15, { duration: 1 });
+  }, [map, focusPoint]);
 
   return null;
 }
 
-// ----------------------------------------------------
-// Main MapView
-// ----------------------------------------------------
+function StopMarker({ item, number, isFocused }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (isFocused && ref.current) ref.current.openPopup();
+  }, [isFocused]);
+
+  const { color, label } = PERIOD_STYLE[item.period];
+
+  return (
+    <Marker
+      ref={ref}
+      position={item.position}
+      icon={numberedIcon(number, color, isFocused)}
+      zIndexOffset={isFocused ? 1000 : 0}
+    >
+      <Popup>
+        <div style={{ minWidth: 190, color: "#111" }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color, margin: 0 }}>
+            {label}
+          </p>
+          <h3 style={{ fontSize: 15, fontWeight: 700, margin: "4px 0 0" }}>
+            {item.activity}
+          </h3>
+          <p style={{ fontSize: 12, margin: "4px 0 0", color: "#555" }}>
+            {item.location}
+          </p>
+          {item.description ? (
+            <p style={{ fontSize: 12, margin: "6px 0 0" }}>
+              {item.description}
+            </p>
+          ) : null}
+          {item.estimatedCost > 0 ? (
+            <p style={{ fontSize: 12, fontWeight: 600, margin: "8px 0 0" }}>
+              Estimated cost: ₹
+              {Number(item.estimatedCost).toLocaleString("en-IN")}
+            </p>
+          ) : null}
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
+
 export default function MapView({
   destination,
   itinerary,
   activeDay = 0,
-  focusLocation,
+  focusLocation, // "morning" | "afternoon" | "evening" | undefined
 }) {
-  // 1. State to store the real coordinates fetched from the API
-  const [centerCoords, setCenterCoords] = useState([48.8566, 2.3522]); // Default to Paris
-  const [geocodingLoading, setGeocodingLoading] = useState(false);
+  const [center, setCenter] = useState(null);
+  const [centerLoading, setCenterLoading] = useState(false);
+  const [coordsByKey, setCoordsByKey] = useState({});
+  const [pendingCount, setPendingCount] = useState(0);
+  const [failedKeys, setFailedKeys] = useState([]);
 
-  // 2. Fetch real coordinates based on the destination string
+  /* 1. Geocode the destination --------------------------------------- */
   useEffect(() => {
     if (!destination) return;
+    const controller = new AbortController();
 
-    const geocodeDestination = async () => {
-      setGeocodingLoading(true);
+    (async () => {
+      setCenterLoading(true);
       try {
-        // Using free OpenStreetMap Nominatim API
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}`,
-        );
-        const data = await response.json();
-
-        if (data && data.length > 0) {
-          setCenterCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
-        }
-      } catch (error) {
-        console.error("Geocoding failed:", error);
-        // Keep default Paris coordinates if geocoding fails
+        const { coords } = await geocode(destination, controller.signal);
+        if (coords) setCenter(coords);
+      } catch (err) {
+        if (err.name !== "AbortError") console.error("Geocoding failed:", err);
       } finally {
-        setGeocodingLoading(false);
+        if (!controller.signal.aborted) setCenterLoading(false);
       }
-    };
+    })();
 
-    geocodeDestination();
+    return () => controller.abort();
   }, [destination]);
 
-  // 3. Get activities from selected day
-  const locations = useMemo(() => {
+  /* 2. Stops for the active day -------------------------------------- */
+  const stops = useMemo(() => {
     const day = itinerary?.days?.[activeDay];
-
     if (!day) return [];
 
-    const periods = ["morning", "afternoon", "evening"];
-
-    return periods
-      .map((period) => {
-        const activity = day?.[period];
-
-        if (!activity?.location) return null;
-
-        return {
-          period,
-          activity: activity.activity || "Activity",
-          description: activity.description || "",
-          location: activity.location,
-          estimatedCost: activity.estimatedCost || 0,
-        };
-      })
-      .filter(Boolean);
-  }, [itinerary, activeDay]);
-
-  // 4. Create markers around the REAL destination coordinates (MEMOIZED)
-  const markers = useMemo(() => {
-    return locations.map((location, index) => {
-      const offsets = [
-        [0.01, 0],
-        [-0.008, 0.012],
-        [0.006, -0.015],
-      ];
-
-      const offset = offsets[index % offsets.length];
-
+    return PERIODS.map((period) => {
+      const a = day[period];
+      if (!a?.location) return null;
       return {
-        ...location,
-        position: [centerCoords[0] + offset[0], centerCoords[1] + offset[1]],
+        period,
+        activity: a.activity || "Activity",
+        description: a.description || "",
+        location: a.location,
+        estimatedCost: Number(a.estimatedCost) || 0,
+        key: `${destination || ""}|${a.location}`.toLowerCase(),
       };
-    });
-  }, [locations, centerCoords]);
+    }).filter(Boolean);
+  }, [itinerary, activeDay, destination]);
 
-  // 5. 🛑 FIX: Convert string focusLocation ("morning", etc.) into a real coordinate
-  const focusCoords = useMemo(() => {
-    // If focusLocation is null or not a string, don't do anything
-    if (!focusLocation || typeof focusLocation !== "string") return null;
+  /* 3. Geocode each stop, one at a time, updating the map as we go --- */
+  useEffect(() => {
+    if (!stops.length || !destination) return;
 
-    const day = itinerary?.days?.[activeDay];
-    if (!day) return null;
+    const controller = new AbortController();
+    const todo = stops.filter((s) => !coordsByKey[s.key]);
+    if (!todo.length) {
+      setPendingCount(0);
+      return;
+    }
 
-    // Find the location of the specific period
-    const periodData = day[focusLocation];
-    if (!periodData?.location) return null;
+    (async () => {
+      setPendingCount(todo.length);
+      const failed = [];
 
-    // Find the index of this period to use the exact same offset as the marker
-    const periods = ["morning", "afternoon", "evening"];
-    const periodIndex = periods.indexOf(focusLocation);
+      for (const stop of todo) {
+        if (controller.signal.aborted) return;
+        try {
+          const { coords, fromNetwork } = await geocode(
+            `${stop.location}, ${destination}`,
+            controller.signal,
+          );
+          if (coords) {
+            setCoordsByKey((prev) => ({ ...prev, [stop.key]: coords }));
+          } else {
+            failed.push(stop.key);
+          }
+          // Nominatim policy: max 1 request per second
+          if (fromNetwork) await sleep(1100);
+        } catch (err) {
+          if (err.name === "AbortError") return;
+          console.error("Geocode failed for", stop.location, err);
+          failed.push(stop.key);
+        }
+        setPendingCount((n) => Math.max(0, n - 1));
+      }
 
-    // If it's not found, return null (don't fly anywhere)
-    if (periodIndex === -1) return null;
+      if (!controller.signal.aborted) {
+        setPendingCount(0);
+        setFailedKeys(failed);
+      }
+    })();
 
-    const offsets = [
-      [0.01, 0],
-      [-0.008, 0.012],
-      [0.006, -0.015],
-    ];
-    const offset = offsets[periodIndex % offsets.length];
+    return () => controller.abort();
+    // coordsByKey is intentionally excluded: results arrive one by one
+    // and must not restart the loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stops, destination]);
 
-    // Return the approximated coordinate for the activity
-    return [centerCoords[0] + offset[0], centerCoords[1] + offset[1]];
-  }, [focusLocation, itinerary, activeDay, centerCoords]);
-
-  // 6. If there are no itinerary locations, still show destination marker
-  const destinationMarker = useMemo(
-    () => ({
-      position: centerCoords,
-      name: destination || "Destination",
-    }),
-    [centerCoords, destination],
+  /* 4. Only show stops that were really located ---------------------- */
+  const markers = useMemo(
+    () =>
+      stops
+        .filter((s) => coordsByKey[s.key])
+        .map((s) => ({ ...s, position: coordsByKey[s.key] })),
+    [stops, coordsByKey],
   );
 
+  const points = useMemo(() => markers.map((m) => m.position), [markers]);
+
+  const focusPoint = useMemo(() => {
+    if (!focusLocation) return null;
+    return markers.find((m) => m.period === focusLocation)?.position || null;
+  }, [focusLocation, markers]);
+
+  const unlocated = stops.filter((s) => failedKeys.includes(s.key));
+
   return (
-    <div className="relative w-full h-full rounded-[2.5rem] overflow-hidden">
+    <div className="relative w-full h-full min-h-[320px] rounded-[2rem] overflow-hidden bg-[#0b0b0d]">
       <MapContainer
-        center={centerCoords}
-        zoom={12}
-        scrollWheelZoom={false}
+        center={center || DEFAULT_CENTER}
+        zoom={center ? 12 : 4}
+        scrollWheelZoom={true}
         className="w-full h-full z-0"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
         />
 
-        {/* 🛑 CRITICAL FIX: Only render MapController when coordinates are completely valid */}
-        {!geocodingLoading &&
-          centerCoords.every(
-            (coord) => typeof coord === "number" && !isNaN(coord),
-          ) && (
-            <MapController center={centerCoords} focusLocation={focusCoords} />
-          )}
+        <CameraController
+          center={center}
+          points={points}
+          focusPoint={focusPoint}
+          activeDay={activeDay}
+        />
 
-        {/* Destination marker - Added missing 'key' prop */}
-        <Marker key="destination-marker" position={destinationMarker.position}>
-          <Popup>
-            <div className="text-black">
-              <strong>{destinationMarker.name}</strong>
-            </div>
-          </Popup>
-        </Marker>
-
-        {/* Itinerary markers */}
-        {markers.map((item, index) => (
-          <Marker key={`${item.period}-${index}`} position={item.position}>
+        {center && (
+          <Marker position={center} icon={destinationIcon}>
             <Popup>
-              <div className="text-black min-w-[180px]">
-                <p className="text-xs font-bold uppercase text-blue-600">
-                  {item.period}
-                </p>
-
-                <h3 className="font-bold mt-1">{item.activity}</h3>
-
-                <p className="text-xs mt-1">{item.location}</p>
-
-                {item.estimatedCost && (
-                  <p className="text-xs mt-2 font-semibold">
-                    Cost: ₹{item.estimatedCost}
-                  </p>
-                )}
-              </div>
+              <strong style={{ color: "#111" }}>
+                {destination || "Destination"}
+              </strong>
             </Popup>
           </Marker>
+        )}
+
+        {points.length > 1 && (
+          <Polyline
+            positions={points}
+            pathOptions={{
+              color: "#ffffff",
+              weight: 3,
+              opacity: 0.6,
+              dashArray: "6 8",
+            }}
+          />
+        )}
+
+        {markers.map((item, i) => (
+          <StopMarker
+            key={`${activeDay}-${item.period}`}
+            item={item}
+            number={i + 1}
+            isFocused={focusLocation === item.period}
+          />
         ))}
       </MapContainer>
 
-      {/* Map overlay */}
-      <div className="absolute top-5 left-5 z-[1000]">
-        <div className="bg-[#050506]/90 backdrop-blur-xl border border-white/10 rounded-2xl px-5 py-3 shadow-2xl">
-          <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.3em]">
-            Navigation Grid
+      {/* Info card */}
+      <div className="absolute top-4 left-4 z-[1000] max-w-[70%]">
+        <div className="bg-[#050506]/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 shadow-2xl">
+          <p className="text-sm font-bold text-white truncate">
+            {centerLoading ? "Locating…" : destination || "No destination"}
           </p>
-
-          <p className="text-xs font-bold text-white mt-1 flex items-center gap-2">
-            {geocodingLoading ? (
-              <span className="text-gray-500 text-[10px]">Locating...</span>
-            ) : (
-              destination || "Unknown Destination"
-            )}
-          </p>
-
-          <p className="text-[9px] text-gray-500 uppercase tracking-widest mt-1">
-            Day {activeDay + 1} // {markers.length} locations
+          <p className="text-xs text-gray-400 mt-0.5">
+            Day {activeDay + 1} · {markers.length} of {stops.length} stops on
+            map
+            {pendingCount > 0 ? " · finding places…" : ""}
           </p>
         </div>
       </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-4 left-4 z-[1000] flex gap-3 bg-[#050506]/90 backdrop-blur-xl border border-white/10 rounded-full px-4 py-2">
+        {PERIODS.map((p) => (
+          <span
+            key={p}
+            className="flex items-center gap-1.5 text-xs text-gray-300"
+          >
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-full"
+              style={{ background: PERIOD_STYLE[p].color }}
+            />
+            {PERIOD_STYLE[p].label}
+          </span>
+        ))}
+      </div>
+
+      {/* Places we couldn't find */}
+      {unlocated.length > 0 && pendingCount === 0 && (
+        <div className="absolute bottom-4 right-4 z-[1000] max-w-[55%] bg-amber-950/90 border border-amber-500/30 text-amber-200 text-xs rounded-xl px-3 py-2">
+          Couldn't locate: {unlocated.map((s) => s.location).join(", ")}
+        </div>
+      )}
     </div>
   );
 }

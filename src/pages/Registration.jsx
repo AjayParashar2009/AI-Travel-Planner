@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   Activity,
   ChevronRight,
-  Compass,
   Globe,
   Loader2,
   Lock,
@@ -14,44 +13,52 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import TacticalInput from "../components/TacticalInput";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 
 export default function Registration() {
+  // Get register function from auth context
   const { register } = useAuth();
+
+  // Router navigation
   const navigate = useNavigate();
 
+  // Form state
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    country: "IND",
   });
 
+  // Validation and general errors
   const [errors, setErrors] = useState({});
+
+  // Loading state
   const [loading, setLoading] = useState(false);
 
+  // Validate the form fields before submit
   const validate = () => {
     const err = {};
 
-    if (formData.name.length < 2) {
-      err.name = "ENTRY_REQUIRED: NAME";
+    if (formData.name.trim().length < 2) {
+      err.name = "Please enter your name";
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      err.email = "INVALID_UPLINK: EMAIL";
+      err.email = "Please enter a valid email";
     }
 
     if (formData.password.length < 6) {
-      err.password = "SECURITY_BREACH: PASSKEY_TOO_SHORT";
+      err.password = "Password must be at least 6 characters";
     }
 
     return err;
   };
 
+  // Handle form submit — register the user
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -68,12 +75,14 @@ export default function Registration() {
     try {
       await register(formData);
 
-      toast.success(`Welcome aboard, ${formData.name.split(" ")[0]}`);
+      toast.success(`Welcome, ${formData.name.split(" ")[0]}!`);
 
       navigate("/dashboard");
     } catch (err) {
       setErrors({
-        general: err.response?.data?.error || "Connection Failure......",
+        general:
+          err.response?.data?.error ||
+          "Something went wrong. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -82,22 +91,22 @@ export default function Registration() {
 
   return (
     <div className="min-h-screen bg-[#020203] flex font-sans selection:bg-blue-600 selection:text-white text-gray-400 overflow-hidden">
-      {/* Left panel */}
+      {/* Left panel — branding and info */}
       <div className="hidden lg:flex lg:w-[50%] bg-[#050507] relative flex-col justify-between p-16 overflow-hidden border-r border-white/5">
-        {/* Background Overlay with */}
-        <div className="absolute inset-0 bg-[url('')] bg-cover bg-center grayscale opacity-10 mix-blend-overlay" />
+        {/* Subtle gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#020203] via-transparent to-[#020203]" />
-        {/* Brand Header */}
-        <Link to="/" className="required: z-10 flex items-center gap-3 group">
+
+        {/* Logo — links home */}
+        <Link to="/" className="relative z-10 flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-lg border border-white/10 flex items-center justify-center transition-transform duration-500 group-hover:rotate-90 shrink-0">
             <Globe className="text-white" size={18} />
           </div>
           <span className="text-2xl font-black italic uppercase tracking-tighter text-white">
-            Wander <span className="text-blue-600 not-italic">AI.</span>
+            Yatra<span className="text-blue-600 not-italic">AI.</span>
           </span>
         </Link>
 
-        {/* Hero Content */}
+        {/* Welcome copy */}
         <div className="relative z-10 max-w-xl">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -105,150 +114,150 @@ export default function Registration() {
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-7xl font-black leading-[0.85] tracking-tighter mb-8 text-white uppercase italic">
-              The World <br />{" "}
-              <span className="text-blue-600 not-italic">Tailored</span>
+              The World,
+              <br />
+              <span className="text-blue-600 not-italic">Tailored to You</span>
             </h2>
             <p className="text-lg text-gray-500 mb-12 leading-relaxed font-medium">
-              Join the next generation of explorers using neural logistics to
-              reach coordinates the map.
+              Create an account to start planning your next trip with AI.
             </p>
           </motion.div>
 
-          {/* Feature Grid */}
+          {/* Feature highlights */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-8 bg-white/[0.02] backdrop-blur-lg rounded-[32px] border border-white/5 group-hover:border-blue-500/30 transition-all">
-              <Target
-                size={28}
-                className="text-blue-500 mb-4 group-hover:rotate-45 transition-all"
-              />
+            <div className="p-8 bg-white/[0.02] backdrop-blur-lg rounded-[32px] border border-white/5">
+              <Target size={28} className="text-blue-500 mb-4" />
               <h4 className="font-black text-white uppercase italic text-xs tracking-widest mb-1">
-                Precision
+                Accurate
               </h4>
-              <p className="text-[10px] text-gray-600 uppercase font tracking-[0.2em]">
-                Neural Node Routing
+              <p className="text-[10px] text-gray-600 uppercase tracking-[0.2em]">
+                Plans that match your budget
               </p>
             </div>
-            <div className="p-8 bg-white/[0.02] backdrop-blur-lg rounded-[32px] border border-white/5 group-hover:border-blue-500/30 transition-all">
-              <Activity
-                size={28}
-                className="text-blue-500 mb-4 group-hover:rotate-45 transition-all"
-              />
+            <div className="p-8 bg-white/[0.02] backdrop-blur-lg rounded-[32px] border border-white/5">
+              <Activity size={28} className="text-blue-500 mb-4" />
               <h4 className="font-black text-white uppercase italic text-xs tracking-widest mb-1">
-                Real Time
+                Up to Date
               </h4>
-              <p className="text-[10px] text-gray-600 uppercase font tracking-[0.2em]">
-                Active Field Telemetry
+              <p className="text-[10px] text-gray-600 uppercase tracking-[0.2em]">
+                See your trip in real time
               </p>
             </div>
           </div>
         </div>
 
-        {/* Footer Link */}
-        <div className="relative z-10 text-[9px] font-black text-gray-700 uppercase tracking-[0.05em]">
-          &copy; WanderAi // Global Deployment Active
+        {/* Footer */}
+        <div className="relative z-10 text-[10px] font-bold text-gray-700 uppercase tracking-[0.2em]">
+          © {new Date().getFullYear()} YatraAI. All rights reserved.
         </div>
       </div>
 
-      {/* Right Panel */}
+      {/* Right panel — registration form */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12 relative bg-[#020203]">
-        <div className="w-full max-w-[460px] relative">
-          {/* Header */}
+        <div className="w-full max-w-[460px]">
+          {/* Form heading */}
           <div className="mb-12 text-center lg:text-left px-2">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/10 border border-blue-500/20 text-blue-500 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] mb-8 shadow-[0_0_20px-rgba(37,99,235,01)]">
-              <Compass size={14} className="animate-spin-slow" /> New Mission
-              Deployment
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/10 border border-blue-500/20 text-blue-500 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] mb-8">
+              <Globe size={14} /> Create Account
             </div>
             <h1 className="text-4xl font-black text-white italic uppercase tracking-tighter mb-4">
-              Create Profile
+              Sign Up
             </h1>
-            <p className="text-gray-600 font-black text-white italic uppercase tracking-tightern mb-4">
-              Existing Account?{" "}
+            <p className="text-gray-500 text-sm">
+              Already have an account?{" "}
               <Link
                 to="/login"
-                className="text-blue-500 hover:text-blue-400 transition-all underline-offset-4 underline"
+                className="text-blue-500 hover:text-blue-400 transition-all underline underline-offset-4"
               >
-                Login Now
+                Log in
               </Link>
             </p>
           </div>
 
-          {/* Main Form Card */}
+          {/* Form card */}
           <div className="bg-[#08080a] rounded-[40px] border border-white/5 p-2 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent" />
-            {/* Conditional Rendering */}
+            {/* General error message */}
             {errors.general && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="mx-5 mt-6 bg-red-950/20 rounded-2xl border border-red-900/20 text-red-500 p-4 text-[10px] font-black uppercase tracking-widest flex items-center gap-4"
+                className="mx-5 mt-6 bg-red-950/20 rounded-2xl border border-red-900/20 text-red-500 p-4 text-[11px] font-bold flex items-center gap-4"
               >
-                <ShieldAlert size={18} className="animate-pulse" />
+                <ShieldAlert size={18} className="shrink-0" />
                 {errors.general}
               </motion.div>
             )}
+
             <form className="p-8 space-y-5" onSubmit={handleSubmit}>
+              {/* Name input */}
               <TacticalInput
-                label="Username"
+                label="Name"
                 icon={User}
                 type="text"
-                placeholder="Narendra Modi"
+                placeholder="John Doe"
                 value={formData.name}
                 error={errors.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
               />
+
+              {/* Email input */}
               <TacticalInput
                 label="Email"
                 icon={Mail}
                 type="email"
-                placeholder="narendramodi1234@gmail.com"
+                placeholder="you@example.com"
                 value={formData.email}
                 error={errors.email}
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
               />
+
+              {/* Password input */}
               <TacticalInput
                 label="Password"
                 icon={Lock}
                 type="password"
-                placeholder="***********"
+                placeholder="At least 6 characters"
                 value={formData.password}
                 error={errors.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
               />
+
+              {/* Submit button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full group relative bg-blue-600 hover:bg-blue-500 text-white py-6 rounded-2xl font-black uppercase tracking-[0.3em] text-xs transition-all flex items-center justify-center gap-3 shadow-2xl shadow-blue-950/20 mt-8 active:scale-95 disabled:opacity-50"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-6 rounded-2xl font-black uppercase tracking-[0.3em] text-xs transition-all flex items-center justify-center gap-3 shadow-2xl shadow-blue-950/20 mt-8 active:scale-95 disabled:opacity-50"
               >
                 {loading ? (
-                  <Loader2 />
+                  <Loader2 className="animate-spin" />
                 ) : (
                   <>
-                    Register Now <ChevronRight />
+                    Create Account <ChevronRight size={16} />
                   </>
                 )}
               </button>
             </form>
           </div>
 
-          {/* Trusted Bades */}
-          <div className="mt-12 flex items-center justify-center gap-10 opacity-20 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
-            <div className="flex items-center gap-2 font-black text-[9px] uppercase tracking-[0.02em] text-white">
+          {/* Trust badges */}
+          <div className="mt-12 flex items-center justify-center gap-10 text-gray-500">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
               <ShieldCheck size={14} className="text-blue-500" />
-              AES-256
+              Secure
             </div>
-            <div className="flex items-center gap-2 font-black text-[9px] uppercase tracking-[0.02em] text-white">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
               <Zap size={14} className="text-blue-500" />
-              INSTANT SYNC
+              Fast
             </div>
-            <div className="flex items-center gap-2 font-black text-[9px] uppercase tracking-[0.02em] text-white">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
               <MapPin size={14} className="text-blue-500" />
-              GLOBAL NODES
+              Anywhere
             </div>
           </div>
         </div>

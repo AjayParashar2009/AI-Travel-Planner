@@ -10,6 +10,7 @@ export default function Counter({ label, value, setter }) {
         <button
           type="button"
           className="text-gray-600 hover:text-white transition-all font-bold"
+          onClick={() => setter(value - 1)}
         >
           -
         </button>
@@ -17,6 +18,7 @@ export default function Counter({ label, value, setter }) {
         <button
           type="button"
           className="text-gray-600 hover:text-white transition-all font-bold"
+          onClick={() => setter(value + 1)}
         >
           +
         </button>

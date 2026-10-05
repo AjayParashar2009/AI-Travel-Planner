@@ -14,6 +14,8 @@ const AuthContext = createContext(null);
 const STORAGE_KEYS_TO_CLEAR = [
   "token",
   "user",
+  "wander_token",
+  "wander_user",
   "wanderer_token",
   "wanderer_user",
 ];
@@ -22,9 +24,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ================================
   // INITIALIZE AUTH
-  // ================================
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -86,18 +86,14 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // ================================
   // CLEAR OLD STORAGE
-  // ================================
   const clearLegacyStorage = useCallback(() => {
     STORAGE_KEYS_TO_CLEAR.forEach((key) => {
       localStorage.removeItem(key);
     });
   }, []);
 
-  // ================================
   // LOGIN
-  // ================================
   const handleLogin = useCallback(
     async (email, password) => {
       const { data } = await authAPI.login({
@@ -117,9 +113,7 @@ export function AuthProvider({ children }) {
     [clearLegacyStorage],
   );
 
-  // ================================
   // REGISTER
-  // ================================
   const handleRegister = useCallback(
     async (formdata) => {
       const { data } = await authAPI.register(formdata);
@@ -136,18 +130,14 @@ export function AuthProvider({ children }) {
     [clearLegacyStorage],
   );
 
-  // ================================
   // LOGOUT
-  // ================================
   const handleLogout = useCallback(() => {
     clearLegacyStorage();
     setUser(null);
     window.location.href = "/login";
   }, [clearLegacyStorage]);
 
-  // ================================
   // CONTEXT VALUE
-  // ================================
   const authValue = useMemo(
     () => ({
       user,

@@ -6,7 +6,7 @@ const API_URL = "http://localhost:3000/api";
 const api = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 9000,
+  timeout: 60000,
 });
 
 api.interceptors.request.use(
@@ -69,16 +69,14 @@ export const tripAPI = {
 
 export const budgetAPI = {
   calculate: (data) => api.post("/budget/calculate", data),
-  getInsight: (budgetId) => api.post("/budget/ai-insight", { budgetId }),
+  getInsight: (budgetId) => api.post("/budget/ai-insights", { budgetId }),
+  //                                        ^ plural
   getHistory: async () => {
     const res = await api.get("/budget/history");
     return res.data.budgets || [];
   },
   getById: (id) => api.get(`/budget/${id}`),
-
-  //I will check it
   updateStatus: (id, status) => api.post(`/budget/${id}`, { status }),
-
   delete: (id) => api.delete(`/budget/${id}`),
 };
 
