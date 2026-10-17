@@ -31,6 +31,7 @@ export default function Registration() {
     name: "",
     email: "",
     password: "",
+    country: "India",
   });
 
   // Validation and general errors
@@ -227,6 +228,22 @@ export default function Registration() {
                   setFormData({ ...formData, password: e.target.value })
                 }
               />
+
+              {/* Country input */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest px-1">
+                  Country
+                </label>
+                <TacticalInput
+                  icon={Globe} // Make sure to import Globe from lucide-react
+                  type="text"
+                  placeholder="e.g. India"
+                  value={formData.country}
+                  onChange={(e) =>
+                    setFormData({ ...formData, country: e.target.value })
+                  }
+                />
+              </div>
 
               {/* Submit button */}
               <button

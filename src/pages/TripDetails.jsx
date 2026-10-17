@@ -24,6 +24,7 @@ import { tripAPI } from "../services/api";
 import LoadingScreen from "../components/LoadingScreen";
 import ExportPDFButton from "../components/ExportPDFButton";
 import UserTripsData from "../components/UserTripsData";
+import WeatherWidget from "../components/WeatherWidget";
 
 export default function TripDetails() {
   // Trip ID from the URL
@@ -73,7 +74,7 @@ export default function TripDetails() {
   if (!trip) return null;
 
   // Destructure the trip object
-  const { destination, itinerary, inputs, logistics } = trip;
+  const { destination, itinerary, inputs, logistics, weather } = trip;
   const cityName = destination?.split(",")[0]?.trim() || "Destination";
   const currentDay = itinerary?.days?.[activeDay];
 
@@ -173,6 +174,9 @@ export default function TripDetails() {
       <main className="container mx-auto px-6 py-20 grid grid-cols-1 lg:grid-cols-12 gap-16">
         {/* Left column — itinerary, timeline, AI insights */}
         <div className="lg:col-span-8 space-y-12">
+          {/* Weather Widget — only shows if weather data exists */}
+          {weather && <WeatherWidget weatherData={weather} />}
+
           {/* Day selector tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-4 border-b border-white/5 scrollbar-hide">
             {itinerary?.days?.map((_, i) => (
@@ -216,7 +220,8 @@ export default function TripDetails() {
           </div>
 
           {/* AI insights for this trip */}
-          <UserTripsData insights={trip} />
+          {/* Note: The prop is now "trip" instead of "insights" */}
+          <UserTripsData trip={trip} />
         </div>
 
         {/* Right column — map and trip logistics */}
