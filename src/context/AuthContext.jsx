@@ -142,7 +142,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       loading,
-
+      setUser, // <--- ADDED THIS LINE
       setLoading,
 
       register: handleRegister,

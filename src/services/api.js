@@ -55,6 +55,7 @@ export const authAPI = {
   register: (data) => api.post("/auth/register", data),
   login: (data) => api.post("/auth/login", data),
   getMe: () => api.get("/auth/me"),
+  googleLogin: (credential) => api.post("/auth/google", { credential }),
 };
 
 export const tripAPI = {
@@ -82,5 +83,3 @@ export const budgetAPI = {
 };
 
 export default api;
-
-console.log(import.meta.env.VITE_API_URL);

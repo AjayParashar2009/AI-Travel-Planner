@@ -14,12 +14,12 @@ import { motion } from "framer-motion";
 import TacticalInput from "../components/TacticalInput";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import { authAPI } from "../services/api";
 
 export default function Login() {
-  // Get login function from auth context
-  const { login } = useAuth();
-
-  // Router navigation
+  // Get login and setUser functions from auth context
+  const { login, setUser } = useAuth();
   const navigate = useNavigate();
 
   // Form state
@@ -29,7 +29,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Handle form submit — log the user in
+  // Handle regular email/password submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -42,6 +42,31 @@ export default function Login() {
       setError(
         err.response?.data?.error ||
           "Login failed. Please check your email and password.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Google login success
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await authAPI.googleLogin(credentialResponse.credential);
+
+      // Save token and user to local storage
+      localStorage.setItem("wander_token", res.data.token);
+      localStorage.setItem("wander_user", JSON.stringify(res.data.user));
+
+      // Update the AuthContext state so the app knows we are logged in
+      setUser(res.data.user);
+
+      // Navigate to dashboard
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError(
+        err.response?.data?.error || "Google login failed. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -209,26 +234,25 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Optional sign-in methods — currently placeholders */}
-        {/* Wire these up if you add Google OAuth or WebAuthn later */}
-        <div className="w-full max-w-md mt-6 grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            className="flex items-center justify-center gap-3 py-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-[10px] font-black text-gray-400 uppercase tracking-widest"
-            disabled
-          >
-            <Sparkles size={14} className="text-blue-500" />
-            Google
-          </button>
+        {/* Divider */}
+        <div className="w-full max-w-md my-6 flex items-center gap-4">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">
+            Or continue with
+          </span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
 
-          <button
-            type="button"
-            className="flex items-center justify-center gap-3 py-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-[10px] font-black text-gray-400 uppercase tracking-widest"
-            disabled
-          >
-            <Fingerprint size={14} />
-            Biometric
-          </button>
+        {/* Google Login Button */}
+        <div className="w-full max-w-md flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError("Google Login Failed")}
+            theme="filled_black"
+            shape="pill"
+            text="continue_with"
+            size="large"
+          />
         </div>
 
         <p className="mt-8 text-center text-[10px] font-bold text-gray-700 uppercase tracking-[0.3em]">
