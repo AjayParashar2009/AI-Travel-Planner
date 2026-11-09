@@ -107,7 +107,7 @@ export default function TripPlanner() {
       const start = new Date(form.startDate);
       const end = new Date(form.endDate);
       const duration =
-        Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) || 1;
+        Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1 || 1;
 
       // Call the API to generate the trip
       const res = await tripAPI.generate({
@@ -335,15 +335,14 @@ export default function TripPlanner() {
                     label="Duration"
                     value={
                       form.startDate && form.endDate
-                        ? `${Math.max(
-                            1,
+                        ? `${
                             Math.ceil(
                               Math.abs(
                                 new Date(form.endDate) -
                                   new Date(form.startDate),
                               ) / 86400000,
-                            ),
-                          )} days`
+                            ) + 1
+                          } days`
                         : "Not set"
                     }
                     sub="From start to end date"

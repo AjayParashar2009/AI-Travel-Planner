@@ -10,6 +10,42 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+// Hardcoded coordinates for popular cities (fallback if API fails)
+const CITY_FALLBACKS = {
+  paris: [48.8566, 2.3522],
+  "paris france": [48.8566, 2.3522],
+  london: [51.5074, -0.1278],
+  "london uk": [51.5074, -0.1278],
+  "new york": [40.7128, -74.006],
+  tokyo: [35.6762, 139.6503],
+  "tokyo japan": [35.6762, 139.6503],
+  dubai: [25.2048, 55.2708],
+  "dubai uae": [25.2048, 55.2708],
+  rome: [41.9028, 12.4964],
+  sydney: [-33.8688, 151.2093],
+  mumbai: [19.076, 72.8777],
+  delhi: [28.6139, 77.209],
+  "new delhi": [28.6139, 77.209],
+  "new delhi india": [28.6139, 77.209],
+  berlin: [52.52, 13.405],
+  "berlin germany": [52.52, 13.405],
+  cairo: [30.0444, 31.2357],
+  "cairo egypt": [30.0444, 31.2357],
+  miami: [25.7617, -80.1918],
+  "miami usa": [25.7617, -80.1918],
+  bern: [46.948, 7.4474],
+  switzerland: [46.8182, 8.2275],
+  "bern switzerland": [46.948, 7.4474],
+  bali: [-8.4095, 115.1889],
+  goa: [15.2993, 74.124],
+  amsterdam: [52.3676, 4.9041],
+  barcelona: [41.3851, 2.1734],
+  madrid: [40.4168, -3.7038],
+  bangkok: [13.7563, 100.5018],
+  singapore: [1.3521, 103.8198],
+  istanbul: [41.0082, 28.9784],
+};
+
 const PERIODS = ["morning", "afternoon", "evening"];
 
 const PERIOD_STYLE = {
@@ -46,31 +82,70 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Returns { coords, fromNetwork }. coords is [lat, lng] or null.
 async function geocode(query, signal) {
   const key = query.toLowerCase().trim();
+
   if (memoryCache.has(key)) {
     return { coords: memoryCache.get(key), fromNetwork: false };
   }
 
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
-    { headers: { "Accept-Language": "en" }, signal },
-  );
-  if (!res.ok) throw new Error(`Nominatim ${res.status}`);
-
-  const data = await res.json();
-  const coords = data?.[0]
-    ? [parseFloat(data[0].lat), parseFloat(data[0].lon)]
-    : null;
-
-  // Only cache successful lookups so a temporary failure can be retried
-  if (
-    Array.isArray(coords) &&
-    coords.length === 2 &&
-    coords.every(Number.isFinite)
-  ) {
+  // 1. Check hardcoded fallbacks
+  const cityKey = key.split(",")[0].trim();
+  if (CITY_FALLBACKS[cityKey]) {
+    const coords = CITY_FALLBACKS[cityKey];
     memoryCache.set(key, coords);
     persistCache();
+    return { coords, fromNetwork: false };
   }
-  return { coords, fromNetwork: true };
+
+  // 2. Try Geoapify
+  try {
+    const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+    if (apiKey) {
+      const res = await fetch(
+        `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(query)}&limit=1&apiKey=${apiKey}`,
+        { signal },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const feature = data.features?.[0];
+        const coords = feature
+          ? [feature.properties.lat, feature.properties.lon]
+          : null;
+
+        if (coords && coords.every(Number.isFinite)) {
+          memoryCache.set(key, coords);
+          persistCache();
+          return { coords, fromNetwork: true };
+        }
+      }
+    }
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+    // Geoapify failed, fall through to backup
+  }
+
+  // 3. Backup: Open-Meteo Geocoder (very good at messy strings)
+  try {
+    const res = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`,
+      { signal },
+    );
+    if (!res.ok) throw new Error("Backup failed");
+
+    const data = await res.json();
+    const result = data.results?.[0];
+    const coords = result ? [result.latitude, result.longitude] : null;
+
+    if (coords && coords.every(Number.isFinite)) {
+      memoryCache.set(key, coords);
+      persistCache();
+      return { coords, fromNetwork: true };
+    }
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+  }
+
+  return { coords: null, fromNetwork: true };
 }
 
 function numberedIcon(number, color, active) {
@@ -252,17 +327,19 @@ export default function MapView({
       for (const stop of todo) {
         if (controller.signal.aborted) return;
         try {
-          const { coords, fromNetwork } = await geocode(
-            `${stop.location}, ${destination}`,
-            controller.signal,
-          );
+          const cleanLocation = stop.location.split(",")[0].trim();
+          const query = cleanLocation
+            .toLowerCase()
+            .includes(destination.toLowerCase())
+            ? cleanLocation
+            : `${cleanLocation}, ${destination}`;
+
+          const { coords } = await geocode(query, controller.signal);
           if (coords) {
             setCoordsByKey((prev) => ({ ...prev, [stop.key]: coords }));
           } else {
             failed.push(stop.key);
           }
-          // Nominatim policy: max 1 request per second
-          if (fromNetwork) await sleep(1100);
         } catch (err) {
           if (err.name === "AbortError") return;
           console.error("Geocode failed for", stop.location, err);
