@@ -10,23 +10,30 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-// Map Open-Meteo WMO codes to Lucide icons
-const getWeatherIcon = (code) => {
-  if (code === 0) return <Sun className="text-yellow-400" size={32} />; // Clear sky
-  if (code === 1 || code === 2) return <CloudSun className="text-yellow-200" size={32} />; // Mainly clear, partly cloudy
-  if (code === 3) return <Cloud className="text-gray-400" size={32} />; // Overcast
-  if (code === 45 || code === 48) return <CloudFog className="text-gray-400" size={32} />; // Fog
-  if (code >= 51 && code <= 67) return <CloudRain className="text-blue-400" size={32} />; // Rain / Drizzle
-  if (code >= 71 && code <= 77) return <Snowflake className="text-blue-200" size={32} />; // Snow
-  if (code >= 80 && code <= 82) return <CloudRain className="text-blue-500" size={32} />; // Rain showers
-  if (code >= 95 && code <= 99) return <CloudLightning className="text-purple-400" size={32} />; // Thunderstorm
-  
-  return <CloudSun className="text-gray-400" size={32} />; // Default
+// Visual Crossing gives string icons, so we map those
+const getWeatherIcon = (iconString) => {
+  if (!iconString) return <CloudSun className="text-gray-400" size={32} />;
+  if (iconString.includes("clear"))
+    return <Sun className="text-yellow-400" size={32} />;
+  if (iconString.includes("partly-cloudy"))
+    return <CloudSun className="text-yellow-200" size={32} />;
+  if (iconString.includes("cloudy") || iconString.includes("overcast"))
+    return <Cloud className="text-gray-400" size={32} />;
+  if (iconString.includes("fog"))
+    return <CloudFog className="text-gray-400" size={32} />;
+  if (iconString.includes("rain") || iconString.includes("showers"))
+    return <CloudRain className="text-blue-400" size={32} />;
+  if (iconString.includes("snow"))
+    return <Snowflake className="text-blue-200" size={32} />;
+  if (iconString.includes("thunder"))
+    return <CloudLightning className="text-purple-400" size={32} />;
+
+  return <CloudSun className="text-gray-400" size={32} />;
 };
 
 export default function WeatherWidget({ weatherData }) {
-  // If no weather data (e.g., trip is >15 days away), don't show anything
-  if (!weatherData || !weatherData.time || weatherData.time.length === 0) {
+  // weatherData is now the "days" array from Visual Crossing
+  if (!weatherData || !Array.isArray(weatherData) || weatherData.length === 0) {
     return null;
   }
 
@@ -36,22 +43,21 @@ export default function WeatherWidget({ weatherData }) {
         <Sun size={14} className="text-blue-500" />
         Weather Forecast
       </h3>
-      
+
       <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
-        {weatherData.time.map((date, index) => {
-          const maxTemp = weatherData.temperature_2m_max[index];
-          const minTemp = weatherData.temperature_2m_min[index];
-          const code = weatherData.weathercode[index];
-          
-          // Format date from "2026-10-20" to "Oct 20"
-          const formattedDate = new Date(date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
+        {weatherData.map((day, index) => {
+          // Convert "2026-11-09" to "Nov 9"
+          const formattedDate = new Date(day.datetime).toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              day: "numeric",
+            },
+          );
 
           return (
             <motion.div
-              key={date}
+              key={day.datetime}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
@@ -60,17 +66,15 @@ export default function WeatherWidget({ weatherData }) {
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                 {formattedDate}
               </p>
-              
-              <div className="mb-3">
-                {getWeatherIcon(code)}
-              </div>
-              
+
+              <div className="mb-3">{getWeatherIcon(day.icon)}</div>
+
               <div className="text-center">
                 <p className="text-sm font-black text-white">
-                  {Math.round(maxTemp)}°
+                  {Math.round(day.tempmax)}°
                 </p>
                 <p className="text-[10px] font-bold text-gray-500">
-                  {Math.round(minTemp)}°
+                  {Math.round(day.tempmin)}°
                 </p>
               </div>
             </motion.div>
