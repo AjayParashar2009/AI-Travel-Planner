@@ -14,19 +14,37 @@ import {
 export default function UserTripsData({ trip }) {
   if (!trip) return null;
 
-  // Trip input fields (backend uses "inputs", plural)
   const inputs = trip.inputs || {};
 
-  // AI insights, if the trip has them
-  const ai = trip.aiInsights || {};
+  // 1. Read the insights array from the database
+  const insightsArray = trip.insights || [];
 
-  // Fallback copy when no AI insights are available yet
+  // 2. Extract the data based on the AI's generated titles
+  const summaryInsight = insightsArray.find(
+    (i) =>
+      i.title?.toLowerCase().includes("custom") ||
+      i.title?.toLowerCase().includes("overview"),
+  );
+
   const displaySummary =
-    ai.verdict || "AI insights for this trip are not available yet.";
+    summaryInsight?.content ||
+    "Here are some AI-generated insights for your trip.";
 
-  const moneySavingTips = ai.moneySavingTips?.length ? ai.moneySavingTips : [];
+  const moneySavingTips = insightsArray
+    .filter(
+      (i) =>
+        i.title?.toLowerCase().includes("money") ||
+        i.title?.toLowerCase().includes("budget"),
+    )
+    .map((i) => i.content);
 
-  const hiddenCosts = ai.hiddenCosts?.length ? ai.hiddenCosts : [];
+  const hiddenCosts = insightsArray
+    .filter(
+      (i) =>
+        i.title?.toLowerCase().includes("safety") ||
+        i.title?.toLowerCase().includes("watch"),
+    )
+    .map((i) => i.content);
 
   const interests = inputs.interest || [];
 
@@ -114,7 +132,7 @@ export default function UserTripsData({ trip }) {
           </div>
           <p className="text-xs font-bold text-gray-800 uppercase">
             {inputs.budgetMin != null && inputs.budgetMax != null
-              ? `₹${inputs.budgetMin} – ₹${inputs.budgetMax}`
+              ? `$${inputs.budgetMin} – $${inputs.budgetMax}`
               : "—"}
           </p>
         </div>
@@ -128,7 +146,7 @@ export default function UserTripsData({ trip }) {
         </p>
       </div>
 
-      {/* Two columns: interests + tips on the left, warnings on the right */}
+      {/* Two columns */}
       <div className="grid md:grid-cols-2 gap-12">
         {/* Left — interests and money-saving tips */}
         <div className="space-y-6">
@@ -156,7 +174,6 @@ export default function UserTripsData({ trip }) {
             <p className="text-sm text-gray-400">No interests selected.</p>
           )}
 
-          {/* Money-saving tips if AI returned any */}
           {moneySavingTips.length > 0 && (
             <div className="pt-6 border-t border-gray-100 space-y-4">
               <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">
@@ -195,7 +212,7 @@ export default function UserTripsData({ trip }) {
               {hiddenCosts.map((cost, i) => (
                 <span
                   key={i}
-                  className="px-5 py-3 bg-gray-50 rounded-2xl text-[11px] font-bold text-gray-700 border border-gray-100 uppercase tracking-wider"
+                  className="px-5 py-3 bg-gray-50 rounded-2xl text-[11px] font-bold text-gray-700 border border-gray-100 tracking-wider"
                 >
                   {cost}
                 </span>

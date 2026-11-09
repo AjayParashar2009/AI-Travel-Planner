@@ -24,7 +24,7 @@ import toast from "react-hot-toast";
 // Format a number as Indian Rupees
 const formatCurrency = (value) => {
   if (value === undefined || value === null || isNaN(value)) return "—";
-  return `₹${Number(value).toLocaleString()}`;
+  return `$${Number(value).toLocaleString()}`;
 };
 
 export default function BudgetEstimator() {
@@ -70,7 +70,7 @@ export default function BudgetEstimator() {
           accommodationType: form.budget,
           travelSeason: "shoulder",
           dailyFoodPreference: "mix",
-          userCurrency: "INR",
+          userCurrency: "USD",
         },
       });
 

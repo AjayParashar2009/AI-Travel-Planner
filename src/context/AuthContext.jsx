@@ -153,7 +153,7 @@ export function AuthProvider({ children }) {
 
       isPro: user?.plan === "pro",
 
-      currency: user?.currency || "INR",
+      currency: user?.currency || "USD",
     }),
     [user, loading, handleRegister, handleLogin, handleLogout],
   );

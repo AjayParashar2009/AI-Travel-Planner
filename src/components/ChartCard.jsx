@@ -51,7 +51,7 @@ function CustomToolTip({ active, payload }) {
         {data.name}
       </p>
       <p className="text-xl font-black text-white tracking-tighter">
-        ₹{Number(data.value)?.toLocaleString()}
+        ${Number(data.value)?.toLocaleString()}
       </p>
       <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-1">
         {percent}% of total
@@ -109,7 +109,7 @@ export function BudgetPieChart({ breakdown }) {
             Total
           </span>
           <span className="text-3xl font-black text-white tracking-tighter italic">
-            ₹{Number(total).toLocaleString()}
+            ${Number(total).toLocaleString()}
           </span>
         </div>
 
@@ -147,7 +147,7 @@ export function BudgetPieChart({ breakdown }) {
               </span>
             </div>
             <span className="text-[11px] font-black text-white whitespace-nowrap">
-              ₹{item.value.toLocaleString()}
+              ${item.value.toLocaleString()}
             </span>
           </div>
         ))}
@@ -237,7 +237,7 @@ export function BudgetOverUnder({ total = 0, targetBudget = 0 }) {
             {isOver ? "Over Budget" : "Within Budget"}
           </div>
           <h2 className="text-5xl font-black text-white tracking-tighter leading-none uppercase italic">
-            ₹{Math.abs(diff).toLocaleString()}
+            ${Math.abs(diff).toLocaleString()}
           </h2>
           <p className="text-[9px] font-black text-gray-600 mt-3 uppercase tracking-[0.4em]">
             {isOver ? "Over your budget" : "Remaining"}

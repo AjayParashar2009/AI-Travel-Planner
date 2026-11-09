@@ -24,9 +24,9 @@ export default function ExportPDFButton({ tripData }) {
         tripData.destination?.split(",")[0]?.trim() || "Destination";
       const destination = tripData.destination || cityName;
       const days = tripData.itinerary?.days || [];
-      const travelers = tripData.input?.numTravelers || 1;
-      const travelStyle = tripData.input?.travelStyle || "Standard";
-      const budget = tripData.input?.budget || "N/A";
+      const travelers = tripData.inputs?.numTravelers || 1;
+      const travelStyle = tripData.inputs?.travelStyle || "Standard";
+      const budget = tripData.inputs?.budget || "N/A";
 
       // Calculate total cost across all activities, guarding against NaN
       const total = days.reduce((acc, day) => {
@@ -132,7 +132,7 @@ export default function ExportPDFButton({ tripData }) {
             `${travelers}`,
             travelStyle,
             `${budget}`,
-            `Rs.${safeTotal.toLocaleString("en-IN")}`,
+            `$${safeTotal.toLocaleString("en-US")}`,
           ],
         ],
         styles: {
@@ -162,7 +162,7 @@ export default function ExportPDFButton({ tripData }) {
 
       // ---- Interests section ----
 
-      const interests = tripData.input?.interest || [];
+      const interests = tripData.inputs?.interest || [];
 
       if (interests.length > 0) {
         y = addSectionTitle("TRAVEL INTERESTS", y);
@@ -212,7 +212,7 @@ export default function ExportPDFButton({ tripData }) {
             data.activity || "N/A",
             data.location || "N/A",
             data.description || "N/A",
-            `Rs.${Number(data.estimatedCost || 0).toLocaleString("en-IN")}`,
+            `$${Number(data.estimatedCost || 0).toLocaleString("en-US")}`,
           ]);
 
           doc.autoTable({
@@ -401,7 +401,7 @@ export default function ExportPDFButton({ tripData }) {
           ["Travelers", `${travelers}`],
           ["Travel Style", travelStyle],
           ["Budget", `${budget}`],
-          ["Estimated Total", `Rs.${safeTotal.toLocaleString("en-IN")}`],
+          ["Estimated Total", `$${safeTotal.toLocaleString("en-US")}`],
         ],
         styles: {
           font: "helvetica",

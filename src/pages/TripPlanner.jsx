@@ -204,11 +204,11 @@ export default function TripPlanner() {
             </div>
 
             {/* Budget range */}
-            <ControlField label="Budget Range (₹)">
+            <ControlField label="Budget Range ($)">
               <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl p-1">
                 <input
                   type="number"
-                  className="w-full bg-transparent py-3 px-4 font-mono text-lg font-bold text-center outline-none text-white"
+                  className="w-full bg-transparent py-3 px-4 font-mono text-lg font-bold text-center outline-none text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   value={form.budgetMin}
                   onChange={(e) =>
                     setForm({ ...form, budgetMin: Number(e.target.value) })
@@ -217,7 +217,7 @@ export default function TripPlanner() {
                 <ArrowRight size={12} className="text-gray-700 shrink-0" />
                 <input
                   type="number"
-                  className="w-full bg-transparent py-3 px-4 font-mono text-lg font-bold text-center outline-none text-blue-400"
+                  className="w-full bg-transparent py-3 px-4 font-mono text-lg font-bold text-center outline-none text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   value={form.budgetMax}
                   onChange={(e) =>
                     setForm({ ...form, budgetMax: Number(e.target.value) })

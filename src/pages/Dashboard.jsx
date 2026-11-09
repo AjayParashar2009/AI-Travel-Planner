@@ -255,7 +255,7 @@ export default function Dashboard() {
                     key={budget._id || i}
                     time="Recent"
                     action={budget.destination?.split(",")[0] || "Unknown"}
-                    desc={`Budget: ₹${budget.breakdown?.total || "—"}`}
+                    desc={`Budget: $${budget.breakdown?.total || "—"}`}
                     dot="bg-green-500"
                   />
                 ))}

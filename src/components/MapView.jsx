@@ -248,8 +248,8 @@ function StopMarker({ item, number, isFocused }) {
           ) : null}
           {item.estimatedCost > 0 ? (
             <p style={{ fontSize: 12, fontWeight: 600, margin: "8px 0 0" }}>
-              Estimated cost: ₹
-              {Number(item.estimatedCost).toLocaleString("en-IN")}
+              Estimated cost: $
+              {Number(item.estimatedCost).toLocaleString("en-US")}
             </p>
           ) : null}
         </div>

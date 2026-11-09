@@ -141,7 +141,7 @@ export default function TripDetails() {
                     Estimated Cost
                   </span>
                   <span className="text-xl font-black text-white tracking-tighter">
-                    ₹{totalCost.toLocaleString()}
+                    ${totalCost.toLocaleString()}
                     {inputs?.budget && (
                       <span className="text-[10px] text-blue-400 ml-2 font-bold uppercase italic">
                         {inputs.budget}
