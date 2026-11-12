@@ -98,7 +98,7 @@ async function geocode(query, signal) {
 
   // 2. Try Geoapify
   try {
-    const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+    const apiKey = import.meta.env.GEOAPIFY_API_KEY;
     if (apiKey) {
       const res = await fetch(
         `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(query)}&limit=1&apiKey=${apiKey}`,
