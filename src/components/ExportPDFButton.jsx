@@ -19,7 +19,7 @@ export default function ExportPDFButton({ tripData }) {
       // Create the document instance
       const doc = new jsPDF();
 
-      // Extract key trip data
+      // Extract key trip data (FIX: using inputs instead of input)
       const cityName =
         tripData.destination?.split(",")[0]?.trim() || "Destination";
       const destination = tripData.destination || cityName;
@@ -28,7 +28,7 @@ export default function ExportPDFButton({ tripData }) {
       const travelStyle = tripData.inputs?.travelStyle || "Standard";
       const budget = tripData.inputs?.budget || "N/A";
 
-      // Calculate total cost across all activities, guarding against NaN
+      // Calculate total cost
       const total = days.reduce((acc, day) => {
         const morning = parseFloat(day.morning?.estimatedCost) || 0;
         const afternoon = parseFloat(day.afternoon?.estimatedCost) || 0;
@@ -38,25 +38,20 @@ export default function ExportPDFButton({ tripData }) {
 
       const safeTotal = Number.isFinite(total) ? total : 0;
 
-      // ---- Helper functions ----
-
-      // Add page numbers and brand footer to every page
+      // Helper functions
       const addPageNumber = () => {
         const pageCount = doc.internal.getNumberOfPages();
 
         for (let i = 1; i <= pageCount; i++) {
           doc.setPage(i);
-
           doc.setFont("helvetica", "normal");
           doc.setFontSize(8);
           doc.setTextColor(120, 120, 120);
-
           doc.text(
             `YatraAI • ${cityName}`,
             15,
             doc.internal.pageSize.height - 10,
           );
-
           doc.text(
             `Page ${i} of ${pageCount}`,
             195,
@@ -66,21 +61,17 @@ export default function ExportPDFButton({ tripData }) {
         }
       };
 
-      // Add a section heading with an underline
       const addSectionTitle = (title, y) => {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
         doc.setTextColor(20, 20, 25);
         doc.text(title, 15, y);
-
         doc.setDrawColor(220, 220, 220);
         doc.line(15, y + 3, 195, y + 3);
-
         return y + 12;
       };
 
-      // ---- Brand header ----
-
+      // Brand header
       doc.setFillColor(39, 99, 235);
       doc.rect(0, 0, 210, 18, "F");
 
@@ -93,8 +84,7 @@ export default function ExportPDFButton({ tripData }) {
       doc.setFont("helvetica", "normal");
       doc.text("AI TRIP ITINERARY", 195, 12, { align: "right" });
 
-      // ---- Destination hero ----
-
+      // Destination hero
       let y = 35;
 
       doc.setTextColor(20, 20, 25);
@@ -112,17 +102,15 @@ export default function ExportPDFButton({ tripData }) {
       // Confirmed badge
       doc.setFillColor(220, 252, 231);
       doc.roundedRect(155, 27, 40, 10, 3, 3, "F");
-
       doc.setTextColor(22, 101, 52);
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.text("CONFIRMED", 175, 33.5, { align: "center" });
 
-      // ---- Trip summary table ----
-
+      // Trip summary table (FIX: Using autoTable function directly)
       y = 60;
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         theme: "plain",
         head: [["DURATION", "TRAVELERS", "STYLE", "BUDGET", "EST. COST"]],
@@ -160,23 +148,19 @@ export default function ExportPDFButton({ tripData }) {
 
       y = (doc.lastAutoTable?.finalY || y) + 15;
 
-      // ---- Interests section ----
-
+      // Interests section
       const interests = tripData.inputs?.interest || [];
 
       if (interests.length > 0) {
         y = addSectionTitle("TRAVEL INTERESTS", y);
-
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         doc.setTextColor(80, 80, 90);
         doc.text(interests.join(" • "), 15, y);
-
         y += 15;
       }
 
-      // ---- Itinerary section ----
-
+      // Itinerary section
       if (days.length > 0) {
         y = addSectionTitle("ITINERARY", y);
 
@@ -189,7 +173,6 @@ export default function ExportPDFButton({ tripData }) {
 
           if (activities.length === 0) return;
 
-          // Start a new page if close to the bottom
           if (y > 240) {
             doc.addPage();
             y = 25;
@@ -198,12 +181,10 @@ export default function ExportPDFButton({ tripData }) {
           // Day label
           doc.setFillColor(39, 99, 235);
           doc.roundedRect(15, y - 6, 30, 9, 2, 2, "F");
-
           doc.setFont("helvetica", "bold");
           doc.setFontSize(8);
           doc.setTextColor(255, 255, 255);
           doc.text(`DAY ${index + 1}`, 30, y, { align: "center" });
-
           y += 12;
 
           // Activity rows
@@ -215,7 +196,7 @@ export default function ExportPDFButton({ tripData }) {
             `$${Number(data.estimatedCost || 0).toLocaleString("en-US")}`,
           ]);
 
-          doc.autoTable({
+          autoTable(doc, {
             startY: y,
             head: [["PERIOD", "ACTIVITY", "LOCATION", "DESCRIPTION", "COST"]],
             body: tableRows,
@@ -247,8 +228,7 @@ export default function ExportPDFButton({ tripData }) {
         });
       }
 
-      // ---- Logistics section ----
-
+      // Logistics section
       if (tripData.logistics) {
         if (y > 230) {
           doc.addPage();
@@ -256,7 +236,6 @@ export default function ExportPDFButton({ tripData }) {
         }
 
         y = addSectionTitle("LOGISTICS", y);
-
         const logistics = tripData.logistics;
         const logisticsRows = [];
 
@@ -266,29 +245,23 @@ export default function ExportPDFButton({ tripData }) {
             logistics.hotel || logistics.accommodation,
           ]);
         }
-
         if (logistics.transport || logistics.transportation) {
           logisticsRows.push([
             "Transportation",
             logistics.transport || logistics.transportation,
           ]);
         }
-
         if (logistics.travelers) {
           logisticsRows.push(["Travelers", logistics.travelers]);
         }
 
         if (logisticsRows.length > 0) {
-          doc.autoTable({
+          autoTable(doc, {
             startY: y,
             theme: "striped",
             head: [["CATEGORY", "DETAILS"]],
             body: logisticsRows,
-            styles: {
-              font: "helvetica",
-              fontSize: 9,
-              cellPadding: 5,
-            },
+            styles: { font: "helvetica", fontSize: 9, cellPadding: 5 },
             headStyles: {
               fillColor: [39, 99, 235],
               textColor: [255, 255, 255],
@@ -296,14 +269,11 @@ export default function ExportPDFButton({ tripData }) {
             },
             margin: { left: 15, right: 15 },
           });
-
           y = (doc.lastAutoTable?.finalY || y) + 15;
         }
       }
 
-      // ---- AI Insights section ----
-
-      // Prefer aiInsights if present, fall back to insights
+      // AI Insights section
       const rawInsights = tripData.aiInsights || tripData.insights;
 
       if (rawInsights) {
@@ -313,7 +283,6 @@ export default function ExportPDFButton({ tripData }) {
         }
 
         y = addSectionTitle("AI TRAVEL INSIGHTS", y);
-
         const insightRows = [];
 
         if (typeof rawInsights === "string") {
@@ -324,23 +293,19 @@ export default function ExportPDFButton({ tripData }) {
               insightRows.push([`Insight ${index + 1}`, insight]);
             } else {
               insightRows.push([
-                `Insight ${index + 1}`,
-                JSON.stringify(insight),
+                insight.title || `Insight ${index + 1}`,
+                insight.content || JSON.stringify(insight),
               ]);
             }
           });
         } else if (typeof rawInsights === "object") {
           Object.entries(rawInsights).forEach(([key, value]) => {
             if (value === null || value === undefined) return;
-
-            // Convert "moneySavingTips" into "MONEY SAVING TIPS"
             const label = key
               .replace(/([A-Z])/g, " $1")
               .trim()
               .toUpperCase();
-
             let text;
-
             if (Array.isArray(value)) {
               text = value.join(" • ");
             } else if (typeof value === "object") {
@@ -348,13 +313,12 @@ export default function ExportPDFButton({ tripData }) {
             } else {
               text = String(value);
             }
-
             insightRows.push([label, text]);
           });
         }
 
         if (insightRows.length > 0) {
-          doc.autoTable({
+          autoTable(doc, {
             startY: y,
             theme: "grid",
             head: [["CATEGORY", "INFORMATION"]],
@@ -378,13 +342,10 @@ export default function ExportPDFButton({ tripData }) {
         }
       }
 
-      // ---- Final cost summary page ----
-
+      // Final cost summary page
       doc.addPage();
-
       doc.setFillColor(39, 99, 235);
       doc.rect(0, 0, 210, 35, "F");
-
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
@@ -392,7 +353,7 @@ export default function ExportPDFButton({ tripData }) {
 
       y = 55;
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         theme: "plain",
         body: [
@@ -403,22 +364,10 @@ export default function ExportPDFButton({ tripData }) {
           ["Budget", `${budget}`],
           ["Estimated Total", `$${safeTotal.toLocaleString("en-US")}`],
         ],
-        styles: {
-          font: "helvetica",
-          fontSize: 10,
-          cellPadding: 7,
-        },
+        styles: { font: "helvetica", fontSize: 10, cellPadding: 7 },
         columnStyles: {
-          0: {
-            fontStyle: "bold",
-            textColor: [80, 80, 90],
-            cellWidth: 60,
-          },
-          1: {
-            fontStyle: "bold",
-            textColor: [20, 20, 25],
-            cellWidth: 120,
-          },
+          0: { fontStyle: "bold", textColor: [80, 80, 90], cellWidth: 60 },
+          1: { fontStyle: "bold", textColor: [20, 20, 25], cellWidth: 120 },
         },
         margin: { left: 15, right: 15 },
       });
@@ -428,12 +377,10 @@ export default function ExportPDFButton({ tripData }) {
       // Footer note box
       doc.setFillColor(239, 246, 255);
       doc.roundedRect(15, y, 180, 35, 5, 5, "F");
-
       doc.setTextColor(39, 99, 235);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.text("YATRAAI GENERATED ITINERARY", 25, y + 12);
-
       doc.setTextColor(70, 70, 80);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -448,14 +395,9 @@ export default function ExportPDFButton({ tripData }) {
         y + 28,
       );
 
-      // ---- Add page numbers ----
-
       addPageNumber();
 
-      // ---- Save file ----
-
       const filename = `YatraAI-${cityName.replace(/\s+/g, "-")}-Itinerary.pdf`;
-
       doc.save(filename);
 
       toast.success("Trip PDF exported successfully.");

@@ -98,7 +98,7 @@ async function geocode(query, signal) {
 
   // 2. Try Geoapify
   try {
-    const apiKey = import.meta.env.GEOAPIFY_API_KEY;
+    const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
     if (apiKey) {
       const res = await fetch(
         `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(query)}&limit=1&apiKey=${apiKey}`,
@@ -328,11 +328,14 @@ export default function MapView({
         if (controller.signal.aborted) return;
         try {
           const cleanLocation = stop.location.split(",")[0].trim();
-          const query = cleanLocation
+
+          const finalLocation = cleanLocation.replace(/[0-9]/g, "").trim();
+
+          const query = finalLocation
             .toLowerCase()
             .includes(destination.toLowerCase())
-            ? cleanLocation
-            : `${cleanLocation}, ${destination}`;
+            ? finalLocation
+            : `${finalLocation}, ${destination}`;
 
           const { coords } = await geocode(query, controller.signal);
           if (coords) {
