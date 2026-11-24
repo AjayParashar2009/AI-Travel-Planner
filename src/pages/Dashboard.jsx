@@ -212,10 +212,12 @@ export default function Dashboard() {
                       className="flex items-center justify-between p-6 bg-white/[0.02] border border-white/5 rounded-3xl hover:bg-white/[0.04] transition-all group"
                     >
                       <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center">
-                          <span className="text-blue-500 font-bold text-lg">
-                            {trip.destination?.[0]?.toUpperCase() || "?"}
-                          </span>
+                        <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 bg-white/5 border border-white/10">
+                          <img
+                            src={`https://picsum.photos/seed/${encodeURIComponent(trip.destination?.split(",")[0]?.trim() || "travel")}/100/100`}
+                            alt={trip.destination}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                         <div>
                           <h4 className="font-bold text-white group-hover:text-[#4285f4] transition-all">

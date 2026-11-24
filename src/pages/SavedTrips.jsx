@@ -15,21 +15,24 @@ import {
 import { tripAPI } from "../services/api";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
+import useUnsplashImage from "../hooks/useUnsplashImage"; // <-- Import the hook
+
+// Helper component to handle the image fetching for each trip
+function TripImage({ destination, type, className }) {
+  const imageUrl = useUnsplashImage(destination);
+
+  // Fallback if the API takes too long or fails
+  const fallback = `https://picsum.photos/seed/${encodeURIComponent(destination || "travel")}/${type === "hero" ? "1200/800" : "400/400"}`;
+
+  return <SmartImage src={imageUrl || fallback} className={className} />;
+}
 
 export default function SavedTrips() {
-  // All trips fetched from the API
   const [trips, setTrips] = useState([]);
-
-  // Currently selected trip (shown in the left panel)
   const [selectedTrip, setSelectedTrip] = useState(null);
-
-  // Loading state for the initial fetch
   const [loading, setLoading] = useState(true);
-
-  // ID of the trip currently being deleted (shows spinner)
   const [deleting, setDeleting] = useState(null);
 
-  // Fetch all trips on page load
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -47,7 +50,6 @@ export default function SavedTrips() {
     loadData();
   }, []);
 
-  // Delete a trip by ID
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this trip? This cannot be undone.")) return;
 
@@ -65,24 +67,12 @@ export default function SavedTrips() {
     }
   };
 
-  // Generate a stable placeholder image based on the trip ID
-  const getStableImageUrl = (id, type = "hero") => {
-    // Sum the character codes to get a stable number per trip
-    const seed = id
-      ? id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-      : 42;
-
-    const width = type === "hero" ? 1200 : 400;
-    const height = type === "hero" ? 800 : 400;
-    return `https://picsum.photos/seed/${seed}/${width}/${height}`;
-  };
-
   return (
     <div className="min-h-screen bg-[#070708] text-[#fafafa] font-sans selection:bg-blue-500/30 overflow-hidden">
       <Navbar />
 
       <main className="flex h-screen pt-20">
-        {/* Left panel — detail view of selected trip */}
+        {/* Left panel — detail view */}
         <section className="hidden lg:flex flex-[1.4] relative border-r border-white/5 overflow-hidden bg-[#0a0a0b]">
           <AnimatePresence mode="wait">
             {selectedTrip ? (
@@ -95,14 +85,15 @@ export default function SavedTrips() {
               >
                 {/* Background image */}
                 <div className="absolute inset-0 z-0">
-                  <SmartImage
-                    src={getStableImageUrl(selectedTrip._id, "hero")}
+                  <TripImage
+                    destination={selectedTrip.destination}
+                    type="hero"
                     className="w-full h-full opacity-30 grayscale-[0.2]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-[#070708] via-transparent to-transparent" />
                 </div>
 
-                {/* Content overlay */}
+                {/* Content */}
                 <div className="relative z-10 p-16 flex flex-col h-full">
                   <header>
                     <div className="flex items-center gap-3">
@@ -116,7 +107,6 @@ export default function SavedTrips() {
                     </h2>
                   </header>
 
-                  {/* Trip details row */}
                   <div className="mt-auto grid grid-cols-2 gap-8 border-t border-white/10 pt-12 pb-8">
                     <Matrix
                       label="Duration"
@@ -133,7 +123,6 @@ export default function SavedTrips() {
                     />
                   </div>
 
-                  {/* Action buttons */}
                   <div className="flex gap-4">
                     <Link
                       to={`/trip/${selectedTrip._id}`}
@@ -156,7 +145,6 @@ export default function SavedTrips() {
                 </div>
               </motion.div>
             ) : (
-              // Empty state — no trips exist
               <div className="m-auto text-center">
                 <Monitor size={48} className="mx-auto mb-4 text-gray-700" />
                 <p className="text-sm font-bold text-gray-600 uppercase tracking-widest">
@@ -170,7 +158,7 @@ export default function SavedTrips() {
           </AnimatePresence>
         </section>
 
-        {/* Right sidebar — list of all trips */}
+        {/* Right sidebar — list */}
         <section className="flex-1 overflow-y-auto bg-[#070708] p-8 lg:p-10 custom-scrollbar">
           <div className="flex justify-between items-end mb-12">
             <h1 className="text-3xl font-black tracking-tighter uppercase italic text-white">
@@ -187,7 +175,6 @@ export default function SavedTrips() {
 
           <div className="grid gap-4">
             {loading ? (
-              // Loading skeletons
               [...Array(3)].map((_, i) => (
                 <div
                   key={i}
@@ -195,7 +182,6 @@ export default function SavedTrips() {
                 />
               ))
             ) : trips.length === 0 ? (
-              // No trips
               <div className="text-center py-16">
                 <p className="text-sm text-gray-500">No trips yet</p>
                 <p className="text-xs text-gray-600 mt-1">
@@ -203,7 +189,6 @@ export default function SavedTrips() {
                 </p>
               </div>
             ) : (
-              // Trip list
               trips.map((trip) => (
                 <motion.div
                   key={trip._id}
@@ -215,10 +200,13 @@ export default function SavedTrips() {
                   onClick={() => setSelectedTrip(trip)}
                 >
                   <div className="flex items-center gap-5 relative z-10">
-                    <SmartImage
-                      src={getStableImageUrl(trip._id, "thumb")}
-                      className="w-16 h-16 rounded-2xl shrink-0"
+                    {/* Use the new TripImage component here */}
+                    <TripImage
+                      destination={trip.destination}
+                      type="thumb"
+                      className="w-16 h-16 rounded-2xl shrink-0 object-cover"
                     />
+
                     <div className="flex-1 overflow-hidden">
                       <h4
                         className={`font-black text-lg tracking-tighter uppercase italic truncate ${
