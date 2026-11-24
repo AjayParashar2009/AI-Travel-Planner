@@ -59,7 +59,6 @@ export default function Registration() {
     return err;
   };
 
-  // Handle form submit — register the user
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -76,9 +75,8 @@ export default function Registration() {
     try {
       await register(formData);
 
-      toast.success(`Welcome, ${formData.name.split(" ")[0]}!`);
-
-      navigate("/dashboard");
+      toast.success("Registration successful! Please check your email.");
+      navigate("/check-email", { state: { email: formData.email } });
     } catch (err) {
       setErrors({
         general:

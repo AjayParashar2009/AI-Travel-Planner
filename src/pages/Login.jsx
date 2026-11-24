@@ -200,13 +200,12 @@ export default function Login() {
                 <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest">
                   Password
                 </label>
-                <button
-                  type="button"
+                <Link
+                  to="/forgot-password"
                   className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-400"
-                  onClick={() => alert("Password reset is not yet available")}
                 >
                   Forgot password?
-                </button>
+                </Link>
               </div>
               <TacticalInput
                 icon={Lock}

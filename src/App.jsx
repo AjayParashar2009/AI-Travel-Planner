@@ -7,6 +7,10 @@ import BudgetEstimator from "./pages/BudgetEstimator";
 import SavedTrip from "./pages/SavedTrips";
 import TripDetails from "./pages/TripDetails";
 import TripPlanner from "./pages/TripPlanner";
+import VerifyEmail from "./pages/VerifyEmail";
+import ResetPassword from "./pages/ResetPassword";
+import ForgotPassword from "./pages/ForgotPassword";
+import CheckEmail from "./pages/CheckEmail";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -61,6 +65,7 @@ export default function App() {
       <PageWrapper>{children}</PageWrapper>
     );
   };
+
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <BrowserRouter>
@@ -145,6 +150,17 @@ export default function App() {
                   </PrivateRoute>
                 }
               />
+
+              {/* Public routes for email verification and password reset */}
+              <Route path="/verify-email/:token" element={<VerifyEmail />} />
+              <Route path="/check-email" element={<CheckEmail />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route
+                path="/reset-password/:token"
+                element={<ResetPassword />}
+              />
+
+              {/* Catch-all must be the LAST route */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AnimatePresence>

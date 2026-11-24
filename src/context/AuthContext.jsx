@@ -114,21 +114,14 @@ export function AuthProvider({ children }) {
   );
 
   // REGISTER
-  const handleRegister = useCallback(
-    async (formdata) => {
-      const { data } = await authAPI.register(formdata);
+  const handleRegister = useCallback(async (formdata) => {
+    const { data } = await authAPI.register(formdata);
 
-      clearLegacyStorage();
+    // Do NOT log the user in here.
+    // Just return the data so the Registration component can redirect to /check-email.
 
-      localStorage.setItem("wander_token", data.token);
-      localStorage.setItem("wander_user", JSON.stringify(data.user));
-
-      setUser(data.user);
-
-      return data;
-    },
-    [clearLegacyStorage],
-  );
+    return data;
+  }, []);
 
   // LOGOUT
   const handleLogout = useCallback(() => {
@@ -142,7 +135,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       loading,
-      setUser, // <--- ADDED THIS LINE
+      setUser,
       setLoading,
 
       register: handleRegister,
