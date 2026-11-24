@@ -114,14 +114,21 @@ export function AuthProvider({ children }) {
   );
 
   // REGISTER
-  const handleRegister = useCallback(async (formdata) => {
-    const { data } = await authAPI.register(formdata);
+  const handleRegister = useCallback(
+    async (formdata) => {
+      const { data } = await authAPI.register(formdata);
 
-    // Do NOT log the user in here.
-    // Just return the data so the Registration component can redirect to /check-email.
+      if (data.token) {
+        clearLegacyStorage();
+        localStorage.setItem("wander_token", data.token);
+        localStorage.setItem("wander_user", JSON.stringify(data.user));
+        setUser(data.user);
+      }
 
-    return data;
-  }, []);
+      return data;
+    },
+    [clearLegacyStorage],
+  );
 
   // LOGOUT
   const handleLogout = useCallback(() => {

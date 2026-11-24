@@ -75,8 +75,8 @@ export default function Registration() {
     try {
       await register(formData);
 
-      toast.success("Registration successful! Please check your email.");
-      navigate("/check-email", { state: { email: formData.email } });
+      toast.success("Registration successful!");
+      navigate("/dashboard"); // <--- Changed from /check-email
     } catch (err) {
       setErrors({
         general:

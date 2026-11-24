@@ -7,10 +7,8 @@ import BudgetEstimator from "./pages/BudgetEstimator";
 import SavedTrip from "./pages/SavedTrips";
 import TripDetails from "./pages/TripDetails";
 import TripPlanner from "./pages/TripPlanner";
-import VerifyEmail from "./pages/VerifyEmail";
-import ResetPassword from "./pages/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword";
-import CheckEmail from "./pages/CheckEmail";
+import ResetPassword from "./pages/ResetPassword";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -20,52 +18,54 @@ import { motion, AnimatePresence } from "framer-motion";
 import LoadingScreen from "./components/LoadingScreen";
 import { Toaster } from "react-hot-toast";
 
+
+const PageWrapper = ({ children }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{
+        duration: 0.4,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="relative z-10"
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return user ? (
+    <PageWrapper>{children}</PageWrapper>
+  ) : (
+    <Navigate to="/login" replace />
+  );
+};
+
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return user ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <PageWrapper>{children}</PageWrapper>
+  );
+};
+
+
 export default function App() {
-  const PageWrapper = ({ children }) => {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -15 }}
-        transition={{
-          duration: 0.4,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-        className="relative z-10"
-      >
-        {children}
-      </motion.div>
-    );
-  };
-
-  const PrivateRoute = ({ children }) => {
-    const { user, loading } = useAuth();
-
-    if (loading) {
-      return <LoadingScreen />;
-    }
-
-    return user ? (
-      <PageWrapper>{children}</PageWrapper>
-    ) : (
-      <Navigate to="/login" replace />
-    );
-  };
-
-  const PublicRoute = ({ children }) => {
-    const { user, loading } = useAuth();
-
-    if (loading) {
-      return <LoadingScreen />;
-    }
-
-    return user ? (
-      <Navigate to="/dashboard" replace />
-    ) : (
-      <PageWrapper>{children}</PageWrapper>
-    );
-  };
-
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <BrowserRouter>
@@ -151,9 +151,7 @@ export default function App() {
                 }
               />
 
-              {/* Public routes for email verification and password reset */}
-              <Route path="/verify-email/:token" element={<VerifyEmail />} />
-              <Route path="/check-email" element={<CheckEmail />} />
+              {/* Kept Password Reset Routes */}
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route
                 path="/reset-password/:token"
